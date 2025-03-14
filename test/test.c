@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "../rbtree.h"
 #include <string.h>
+#include <time.h>
 
 #define N 200
 #define M 1000
@@ -20,6 +21,8 @@ struct my_node {
 	int v;
 };
 
+#define MY(n)       ((struct my_node *)n)
+
 struct kernel_node
 {
 	struct rb_node2 node;
@@ -28,7 +31,7 @@ struct kernel_node
 
 int cmp(struct rb_node *l, struct rb_node *r)
 {
-	return ((struct my_node *)r)->v - ((struct my_node *)l)->v;
+	return MY(r)->v - MY(l)->v;
 }
 
 struct my_node my_nodes[N];
@@ -52,7 +55,7 @@ int check(int n)
 	printf("======================\n");
 
 	if (tree.root)
-		my = ((struct my_node *)tree.root)->v;
+		my = MY(tree.root)->v;
 	if (kernel_root())
 		k = kernel_root()->v;
 
@@ -65,20 +68,21 @@ int check(int n)
 	for (i = 0; i < n; i++) {
 		int ml = 0, mr = 0, kl = 0, kr = 0;
 		int mp = 0, kp = 0;
-		int my_color = my_nodes[i].node.color;
-		int kn_color = 1 - (kernel_nodes[i].node.rb_parent_color & 1);
+		struct rb_node *n = &my_nodes[i].node;
+		int my_color = rb_color(n);
+		int kn_color = kernel_nodes[i].node.rb_parent_color & 1;
 
 		if (my_nodes[i].v == 0 && kernel_nodes[i].v == 0)
 			continue;
 
 		printf("===\n");
 
-		if (my_nodes[i].node.parent)
-			mp = ((struct my_node *)(my_nodes[i].node.parent))->v;
-		if (my_nodes[i].node.left)
-			ml = ((struct my_node *)(my_nodes[i].node.left))->v;
-		if (my_nodes[i].node.right)
-			mr = ((struct my_node *)(my_nodes[i].node.right))->v;
+		if (rb_parent(n))
+			mp = MY(rb_parent(n))->v;
+		if (n->left)
+			ml = MY(n->left)->v;
+		if (n->right)
+			mr = MY(n->right)->v;
 
 		printf("my node %d, p %d left %d right %d red %d\n", my_nodes[i].v, mp, ml, mr, my_color);
 
@@ -105,6 +109,8 @@ int main()
 	int n = 0;
 	int i;
 	int ret;
+
+	srand(time(NULL));
 
 	while (n++ < M) {
 
@@ -138,14 +144,14 @@ int main()
 			kernel_nodes[i].v = val[i];
 		}
 
-		rb_init(&tree, cmp);
+		rb_init(&tree);
 		kernel_init();
 
 		for (i = 0; i < N; i++) {
 
 			ret = kernel_insert(&kernel_nodes[i]);
 
-			ret = rb_insert(&tree, &my_nodes[i].node);
+			ret = rb_insert(&tree, &my_nodes[i].node, cmp);
 			if (ret != 1)
 				fprintf(stderr, "insert failed\n");
 
